@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>ImageLightnessOrganizer</RootNamespace>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseApplicationFramework>True</UseApplicationFramework>
+    <OptionStrict>On</OptionStrict>
+    <Copyright>ElektroStudios 2026</Copyright>
+    <Company>ElektroStudios</Company>
+    <Product>Image Lightness Organizer</Product>
+    <Authors>ElektroStudios</Authors>
+    <Description>Processes and categorizes images into distinct folders based on their average lightness level.</Description>
+    <NeutralLanguage>en</NeutralLanguage>
+    <Title>Image Lightness Organizer</Title>
+    <AssemblyTitle>Image Lightness Organizer</AssemblyTitle>
+    <ApplicationIcon>App.ico</ApplicationIcon>
+    <AssemblyName>Image_Lightness_Organizer</AssemblyName>
+    <Version>1.0</Version>
+    <Platforms>AnyCPU</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="App.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.8" />
+  </ItemGroup>
+
+</Project>

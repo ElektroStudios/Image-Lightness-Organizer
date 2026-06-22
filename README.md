@@ -18,21 +18,65 @@ windows-application
 windows-applications 
 windows-forms 
 winforms 
+images 
+image-files 
+imagefiles 
+classification 
+organizer 
+directories 
+bmp 
+bmps 
+bitmap 
+bitmaps 
+jpg 
+jpgs 
+jpeg 
+jpegs 
+png 
+pngs 
+tiff 
+webp 
+light 
+lightness 
+files 
+image-processing 
+image-classification 
  -->
 
-# PROJECT NAME
+# Image Lightness Organizer
 
-### PROJECT DESCRIPTION
+### A command-line utility that processes image files and organizes them into folders based on their average lightness value in the CIE L* color space.
 
 ------------------
 
 ## 👋 Introduction
 
-INTRODUCTION TEXT
+**Image Lightness Organizer** is a command-line tool designed to analyze and categorize local image collections. By computing the average lightness ($L^*$) of each image using the scientifically accurate **CIE L* color space**, the application eliminates manual sorting, grouping your media files into structured, percentage-based luminance brackets.
 
 ## 👌 Features
 
-FEATURES TEXT
+- Calculates average image lightness based on human visual perception using the CIE L* color space rather than simple RGB averages.
+- Automatically organizes image files into lightness-based categories.
+- Creates a dedicated `@Sorted by lightness` output folder and automatically distributes image files into 10 distinct percentage-based subfolders:
+  - Light 00%-10%
+  - Light 10%-20%
+  - Light 20%-30%
+  - Light 30%-40%
+  - Light 40%-50%
+  - Light 50%-60%
+  - Light 60%-70%
+  - Light 70%-80%
+  - Light 80%-90%
+  - Light 90%-100%
+- Supports the following image formats:
+  - JPG / JPEG
+  - TIFF / TIF
+  - BMP
+  - PNG
+  - WEBP
+  - ICO
+  - AVIF
+- Non-destructive processing that safely scans top-level files within the source directory only, ignoring subfolders.
 
 ## 🖼️ Screenshots
 
@@ -40,28 +84,20 @@ FEATURES TEXT
 
 ## 🎦 Videos
 
-<!-- Download a recorded video by clicking [here](/Video/video.mp4) -->
-
-<!-- See a recorded video by clicking on the following button:
-[![PROJECT_NAME DEMO VIDEO](Images/demo_video.jpg)](https://www.youtube.com/watch?v=XXXXXXXXX)  -->
+[Image-Lightness-Organizer DEMO VIDEO](xxxxxxxxxxxxxxxx)
 
 ## 📝 Requirements
 
 - Microsoft Windows OS.
+- [.NET Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0)
 
 ## 🤖 Getting Started
 
-Download the latest compilation by clicking [here](https://github.com/ElektroStudios/PROJECT_NAME/releases/latest).
+Download the latest release by clicking [here](https://github.com/ElektroStudios/Image-Lightness-Organizer/releases/latest) and start using it.
 
 ## 🔄 Change Log
 
 Explore the complete list of changes, bug fixes, and improvements across different releases by clicking [here](/Docs/CHANGELOG.md).
-
-## 🏆 Credits
-
-This work relies on the following resources: 
-
- - [.NET Framework](https://dotnet.microsoft.com/en-us/download/dotnet-framework)
 
 ## ⚠️ Disclaimer:
 
@@ -71,7 +107,7 @@ This Work has no affiliation, approval or endorsement by the author(s) of the th
 
 ## 💪 Contributing
 
-Your contribution is highly appreciated!. If you have any ideas, suggestions, or encounter issues, feel free to open an issue by clicking [here](https://github.com/ElektroStudios/PROJECT_NAME/issues/new/choose). 
+Your contribution is highly appreciated!. If you have any ideas, suggestions, or encounter issues, feel free to open an issue by clicking [here](https://github.com/ElektroStudios/Image-Lightness-Organizer/issues/new/choose). 
 
 Your input helps make this Work better for everyone. Thank you for your support! 🚀
 
