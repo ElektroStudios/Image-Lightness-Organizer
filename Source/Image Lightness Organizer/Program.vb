@@ -116,7 +116,7 @@ Public Module Program
         Console.WriteLine("│   • Creates output folder '@Sorted by lightness' in the source directory.           │")
         Console.WriteLine("│   • Organizes the images into sub folders: 'Light 00%-10%', ..., 'Light 90%-100%'   │")
         Console.WriteLine("│                                                                                     │")
-        Console.WriteLine("│ Supported image file extensions: jpg/jpeg, png, bmp, tiff/tif, webp, ico and avif.  │")
+        Console.WriteLine("│ Supported image file extensions: jpg/jpeg, tiff/tif, bmp, png, webp, ico and avif.  │")
         Console.WriteLine("╰─────────────────────────────────────────────────────────────────────────────────────╯")
         Console.WriteLine()
 
@@ -220,9 +220,10 @@ Public Module Program
             Program.WriteColoredLine($"[INFO] Selected Max Degree Of Parallelism: {maxParallelism}", ConsoleColor.Magenta)
             Console.WriteLine()
 
-            Program.WriteColoredLine("Keep in mind that the files are processed in parallel, so the index numbers may not be shown in sequential order.", ConsoleColor.Yellow)
+            Program.WriteColoredLine("Please note that files are processed in parallel, so output may appear disordered.", ConsoleColor.White)
             If Program.isX86 Then
-                Program.WriteColoredLine("Also, the paralellism is set to 1 operation at once in this x86 build, so the process may take very long to complete.", ConsoleColor.Yellow)
+                Console.WriteLine()
+                Program.WriteColoredLine("[WARNING] To prevent an application crash due to memory overflow during image decompression, 32-bit mode restricts processing to a single file at a time. Expect very longer execution time to complete.", ConsoleColor.Yellow)
             End If
             Console.WriteLine()
 
@@ -285,7 +286,6 @@ Public Module Program
                                 GC.Collect()
                                 GC.WaitForPendingFinalizers()
                             End If
-
 #If DEBUG Then
                             Thread.CurrentThread.Join(0) ' Prevents ContextSwitchDeadlock on long-running iterations.
 #End If
@@ -401,6 +401,12 @@ Public Module Program
             End If
 
             Console.WriteLine($"Exiting application with exit code: {exitCode} (0x{exitCode:X8}) ...")
+#If DEBUG Then
+            Console.WriteLine()
+            Program.WriteColoredLine("[!] This message only appears in DEBUG mode to prevent accidental termination.", ConsoleColor.Yellow)
+            Console.WriteLine("Press any key to exit...")
+            Console.ReadKey(intercept:=True)
+#End If
             Environment.Exit(exitCode)
         End SyncLock
     End Sub
