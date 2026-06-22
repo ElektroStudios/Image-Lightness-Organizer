@@ -45,13 +45,13 @@ image-classification
 
 # Image Lightness Organizer
 
-### A command-line utility that processes image files and organizes them into folders based on their average lightness value in the CIE L* color space.
+### A command-line tool for Windows that processes image files and organizes them into folders based on their average lightness value in the CIE L* color space.
 
 ------------------
 
 ## 👋 Introduction
 
-**Image Lightness Organizer** is a command-line tool designed to analyze and categorize local image collections. By computing the average lightness ($L^*$) of each image using the scientifically accurate **CIE L* color space**, the application eliminates manual sorting, grouping your media files into structured, percentage-based luminance brackets.
+**Image Lightness Organizer** is designed to analyze and categorize local image collections. By computing the average lightness ($L^*$) of each image using the scientifically accurate **CIE L* color space**, the application eliminates manual sorting, grouping your media files into structured, percentage-based luminance brackets.
 
 ## 👌 Features
 
@@ -80,7 +80,8 @@ image-classification
 
 ## 🖼️ Screenshots
 
-![screenshot](/Images/screenshot.png)
+![screenshot](/Images/screenshot1.png)
+![screenshot](/Images/screenshot2.png)
 
 ## 🎦 Videos
 
@@ -89,7 +90,7 @@ image-classification
 ## 📝 Requirements
 
 - Microsoft Windows OS.
-- [.NET Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [.NET Runtime 10 (64-Bit)](https://dotnet.microsoft.com/download/dotnet/10.0)
 
 ## 🤖 Getting Started
 
