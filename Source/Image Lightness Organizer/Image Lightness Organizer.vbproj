@@ -18,6 +18,7 @@
     <AssemblyName>Image_Lightness_Organizer</AssemblyName>
     <Version>1.0</Version>
     <Platforms>AnyCPU</Platforms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
