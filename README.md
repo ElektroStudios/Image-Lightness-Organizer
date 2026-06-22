@@ -56,7 +56,7 @@ image-classification
 ## 👌 Features
 
 - Calculates average image lightness based on human visual perception using the CIE L* color space rather than simple RGB averages.
-- Automatically organizes image files into lightness-based categories.
+- Non-destructive processing that safely scans top-level files within the source directory only, ignoring subfolders.
 - Creates a dedicated `@Sorted by lightness` output folder and automatically distributes image files into 10 distinct percentage-based subfolders:
   - Light 00%-10%
   - Light 10%-20%
@@ -76,11 +76,11 @@ image-classification
   - WEBP
   - ICO
   - AVIF
-- Non-destructive processing that safely scans top-level files within the source directory only, ignoring subfolders.
 
 ## 🖼️ Screenshots
 
 ![screenshot](/Images/screenshot1.png)
+
 ![screenshot](/Images/screenshot2.png)
 
 ## 🎦 Videos
