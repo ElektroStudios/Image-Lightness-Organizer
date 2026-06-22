@@ -85,7 +85,9 @@ image-classification
 
 ## 🎦 Videos
 
-[Image-Lightness-Organizer DEMO VIDEO](xxxxxxxxxxxxxxxx)
+[Image-Lightness-Organizer BETA DEMO VIDEO](https://github.com/user-attachments/assets/e5148e9b-144c-4e13-852d-3599dc7d7426)
+
+Note: demo video is from a beta version.
 
 ## 📝 Requirements
 
