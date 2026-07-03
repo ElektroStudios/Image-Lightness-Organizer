@@ -44,7 +44,7 @@ image-classification
  -->
 
 <div align="center">
-  <img src="/blob/main/Images/App.ico" width="80" alt="FIV Logo">
+  <img src="/Images/App.ico" width="80" alt="FIV Logo">
   
   <h1>Image Lightness Organizer (ILO)</h1>
 
