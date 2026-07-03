@@ -15,7 +15,9 @@ Imports System.Runtime.InteropServices
 Imports System.Text
 Imports System.Threading
 
+#If Not NETCOREAPP Then
 Imports DevCase.Runtime.TypeComparers
+#End If
 
 #End Region
 
@@ -42,6 +44,13 @@ Public Module Program
     Private Const OutputFolderName As String = "@Sorted by lightness"
 
     ''' <summary>
+    ''' The default percentage step size used for folder name ranges when no custom argument is provided.
+    ''' <para></para>
+    ''' For example, a default value of 10 organizes images into folders with 10% increments (e.g., "Light 00%-10%", "Light 10%-20%").
+    ''' </summary>
+    Private Const DefaultStepPercentage As Integer = 10
+
+    ''' <summary>
     ''' The maximum estimated amount of physical memory, in Gigabytes (GB), required by a single thread to process an image.
     ''' </summary>
     ''' 
@@ -64,9 +73,14 @@ Public Module Program
     Private ReadOnly CultureInfoEnUs As New CultureInfo("en-US")
 
     ''' <summary>
+    ''' The UTF-8 encoding instance used for console output, configured to not emit a BOM (Byte Order Mark).
+    ''' </summary>
+    Private ReadOnly ConsoleEncoding As New UTF8Encoding(encoderShouldEmitUTF8Identifier:=False)
+
+    ''' <summary>
     ''' The synchronization object used to ensure thread-safe console output when processing files in parallel.
     ''' </summary>
-    Private ReadOnly syncLockObject As New Object()
+    Friend ReadOnly syncLockObject As New Object()
 
 #End Region
 
@@ -82,12 +96,13 @@ Public Module Program
     ''' The first argument (args(0)) is expected to be the path to the 
     ''' source directory containing image files to process.
     ''' </param>
+    <DebuggerStepperBoundary>
     Public Sub Main(args As String())
 
         Thread.CurrentThread.CurrentCulture = Program.CultureInfoEnUs
         Thread.CurrentThread.CurrentUICulture = Program.CultureInfoEnUs
 
-        Console.OutputEncoding = Encoding.UTF8
+        Console.OutputEncoding = Program.ConsoleEncoding
         Console.BackgroundColor = ConsoleColor.Black
         Console.ForegroundColor = ConsoleColor.White
 
@@ -104,7 +119,7 @@ Public Module Program
 #If Debug Then
         Console.Title = consoletitle
 #End If
-        Program.WriteColoredLine(" " & consoletitle, ConsoleColor.Cyan)
+        ConsoleHelper.WriteColoredLine(" " & consoletitle, ConsoleColor.Cyan)
         Console.WriteLine("╭─────────────────────────────────────────────────────────────────────────────────────╮")
         Console.WriteLine("│ Purpose:                                                                            │")
         Console.WriteLine("│   This application processes image files and organizes them into folders            │")
@@ -121,31 +136,41 @@ Public Module Program
         Console.WriteLine()
 
         If args.Length = 0 Then
-            Dim executableName As String = Process.GetCurrentProcess().ProcessName & ".exe"
-            Dim exitMsg As String = "[ERROR] Source directory path argument is required." &
-                                    Environment.NewLine & Environment.NewLine &
-                                    $"Usage: {executableName} <directory_path>"
-            Program.ExitWithMessage(exitMsg, exitCode:=2, ConsoleColor.Red)
+            Program.ShowUsage()
+            ConsoleHelper.ExitWithMessage("[ERROR] Missing argument(s). See usage above.", exitCode:=2, ConsoleColor.Red)
         End If
 
         Dim totalMovedFiles As Integer = 0
         Dim totalFailedFiles As Integer = 0
 
+        Dim stepPercentage As Integer = Program.DefaultStepPercentage
+        If args.Length >= 2 Then
+            If Not Integer.TryParse(args(1), NumberStyles.Integer, Program.CultureInfoEnUs, stepPercentage) OrElse stepPercentage < 1 OrElse stepPercentage > 10 Then
+                Program.ShowUsage()
+                ConsoleHelper.ExitWithMessage("[ERROR] The percentage step value must be an integer between 1 and 10.", exitCode:=5, ConsoleColor.Red)
+            End If
+        End If
+
         Dim sourceDirPath As String = args(0)
         Try
+            Dim sourceDirPathExtended As String = Path.GetFullPath(sourceDirPath)
+            sourceDirPathExtended = FileSystemHelper.GetExtendedPath(sourceDirPathExtended)
+
             If Not Directory.Exists(sourceDirPath) Then
                 Dim exitMsg As String = $"[ERROR] The specified directory path does not exist: {sourceDirPath}"
-                Program.ExitWithMessage(exitMsg, exitCode:=3, ConsoleColor.Red)
+                ConsoleHelper.ExitWithMessage(exitMsg, exitCode:=3, ConsoleColor.Red)
             End If
 
-            sourceDirPath = Path.GetFullPath(args(0))
+            Dim destRoot As String = Path.Combine(sourceDirPathExtended, Program.OutputFolderName)
 
-            Dim destRoot As String = Path.Combine(sourceDirPath, Program.OutputFolderName)
-
-            Dim naturalSortOrderComparer As New StringNaturalComparer()
+#If NETCOREAPP Then
+            Dim filePathComparer As StringComparer = StringComparer.Create(CultureInfo.InvariantCulture, CompareOptions.NumericOrdering)
+#Else
+            Dim filePathComparer As New StringNaturalComparer()
+#End If
 
             Dim sourceFiles As New SortedSet(Of String)(
-                Directory.GetFiles(sourceDirPath, "*.*", SearchOption.TopDirectoryOnly).
+                Directory.GetFiles(sourceDirPathExtended, "*.*", SearchOption.TopDirectoryOnly).
                           Where(Function(f As String)
                                     If Path.HasExtension(f) Then
                                         Dim ext As String = Path.GetExtension(f)
@@ -153,19 +178,20 @@ Public Module Program
                                     Else
                                         Return False
                                     End If
-                                End Function), naturalSortOrderComparer)
+                                End Function), filePathComparer)
 
             Dim totalSourceFileCount As Integer =
                 If(sourceFiles Is Nothing, 0, sourceFiles.Count)
 
             If totalSourceFileCount = 0 Then
                 Dim exitMsg As String = $"[ERROR] No supported image files were found in source directory: {sourceDirPath}"
-                Program.ExitWithMessage(exitMsg, exitCode:=4, ConsoleColor.Red)
+                ConsoleHelper.ExitWithMessage(exitMsg, exitCode:=4, ConsoleColor.Red)
             End If
 
-            Program.WriteColoredLine($"Source directory path: {sourceDirPath}", ConsoleColor.DarkCyan)
-            Program.WriteColoredLine($"Dest.  directory path: {destRoot}", ConsoleColor.DarkCyan)
-            Program.WriteColoredLine($"Supported files found: {totalSourceFileCount:N0} image files", ConsoleColor.DarkCyan)
+            ConsoleHelper.WriteColoredLine($"Source directory path  : {sourceDirPath}", ConsoleColor.DarkCyan)
+            ConsoleHelper.WriteColoredLine($"Output directory path  : {destRoot}", ConsoleColor.DarkCyan)
+            ConsoleHelper.WriteColoredLine($"Supported files found  : {totalSourceFileCount:N0} image files", ConsoleColor.DarkCyan)
+            ConsoleHelper.WriteColoredLine($"Interval percentage    : {stepPercentage}% steps", ConsoleColor.DarkCyan)
             Console.WriteLine()
 
             Dim availableMemoryGB As Double
@@ -186,6 +212,7 @@ Public Module Program
                     Throw New Win32Exception(errorCode, $"Failed to retrieve system memory status. Function 'GlobalMemoryStatusEx' returned Win32 error code {errorCode}.")
                 End If
             End If
+            ConsoleHelper.WriteColoredLine($"Available total memory : {availableMemoryGB:F2} GB", ConsoleColor.DarkCyan)
 
             ' Calculate safe parallelism degree based on memory constraints.
             Dim maxParallelism As Integer
@@ -211,25 +238,25 @@ Public Module Program
             End If
 
             If Not Program.isX86 Then
-                Program.WriteColoredLine($"[INFO] CPU Cores: {Environment.ProcessorCount}", ConsoleColor.Magenta)
+                ConsoleHelper.WriteColoredLine($"[INFO] CPU Cores: {Environment.ProcessorCount}", ConsoleColor.Magenta)
             End If
-            Program.WriteColoredLine($"[INFO] OS Architecture: {If(IntPtr.Size = 4, "x86", "x64")}", ConsoleColor.Magenta)
+            ConsoleHelper.WriteColoredLine($"[INFO] OS Architecture: {If(IntPtr.Size = 4, "x86", "x64")}", ConsoleColor.Magenta)
             If Not Program.isX86 Then
-                Program.WriteColoredLine($"[INFO] Available Memory Budget: {availableMemoryGB:F2} GB", ConsoleColor.Magenta)
+                ConsoleHelper.WriteColoredLine($"[INFO] Available Memory Budget: {availableMemoryGB:F2} GB", ConsoleColor.Magenta)
             End If
-            Program.WriteColoredLine($"[INFO] Selected Max Degree Of Parallelism: {maxParallelism}", ConsoleColor.Magenta)
+            ConsoleHelper.WriteColoredLine($"[INFO] Selected Max Degree Of Parallelism: {maxParallelism}", ConsoleColor.Magenta)
             Console.WriteLine()
 
-            Program.WriteColoredLine("Please note that files are processed in parallel, so output may appear disordered.", ConsoleColor.White)
+            ConsoleHelper.WriteColoredLine("Please note that files are processed in parallel, so output may appear disordered.", ConsoleColor.White)
             If Program.isX86 Then
                 Console.WriteLine()
-                Program.WriteColoredLine("[WARNING] To prevent an application crash due to memory overflow during image decompression, 32-bit mode restricts processing to a single file at a time. Expect very longer execution time to complete.", ConsoleColor.Yellow)
+                ConsoleHelper.WriteColoredLine("[WARNING] To prevent an application crash due to memory overflow during image decompression, 32-bit mode restricts processing to a single file at a time. Expect very longer execution time to complete.", ConsoleColor.Yellow)
             End If
             Console.WriteLine()
 
-#If Debug Then
-            Program.WriteColoredLine("Press 'Y' key to start processing the files, or 'Escape' key to exit...", ConsoleColor.Yellow)
-            Program.WriteColoredLine("[!] This message only appears in DEBUG mode to prevent accidental execution.", ConsoleColor.Yellow)
+#If DEBUG Then
+            ConsoleHelper.WriteColoredLine("Press 'Y' key to start processing the files, or 'Escape' key to exit...", ConsoleColor.Yellow)
+            ConsoleHelper.WriteColoredLine("[!] This message only appears in DEBUG mode to prevent accidental execution.", ConsoleColor.Yellow)
             Console.WriteLine()
             Do
                 Dim keyInfo As ConsoleKeyInfo = Console.ReadKey(intercept:=True)
@@ -253,8 +280,8 @@ Public Module Program
                     Sub(filePath As String)
                         Try
                             Dim fileName As String = Path.GetFileName(filePath)
-                            Dim averageL As Double = UtilImage.ComputeAverageLightness(filePath)
-                            Dim folderName As String = Program.LightnessToFolderName(averageL)
+                            Dim averageL As Double = ImageHelper.ComputeAverageLightness(filePath)
+                            Dim folderName As String = ColorHelper.LightnessToFolderName(averageL, stepPercentage)
                             Dim destinationDirectory As String = Path.Combine(destRoot, folderName)
                             Dim destinationFilePath As String = Path.Combine(destinationDirectory, fileName)
                             If Not Directory.Exists(destinationDirectory) Then
@@ -264,20 +291,20 @@ Public Module Program
                             End If
 
                             If File.Exists(destinationFilePath) Then
-                                Program.WriteColoredLine($"[{Interlocked.Increment(currentFileIndex).ToString("N0").PadLeft(currentFileIndexPadding, " "c):N0} / {totalSourceFileCount:N0}] [WARN] Cannot move file. The destination file already exists in output directory: {destinationFilePath}.", ConsoleColor.Yellow)
+                                ConsoleHelper.WriteColoredLine($"[{Interlocked.Increment(currentFileIndex).ToString("N0").PadLeft(currentFileIndexPadding, " "c):N0} / {totalSourceFileCount:N0}] [WARN] Cannot move file. The destination file already exists in output directory: {destinationFilePath}.", ConsoleColor.Yellow)
                                 totalFailedFiles += 1
                             Else
                                 File.Move(filePath, destinationFilePath)
-                                Program.WriteColoredLine($"[{Interlocked.Increment(currentFileIndex).ToString("N0").PadLeft(currentFileIndexPadding, " "c):N0} / {totalSourceFileCount:N0}] [SUCCESS] {Path.GetFileName(filePath)} -> {folderName} (L*={averageL:F1})", ConsoleColor.Green)
+                                ConsoleHelper.WriteColoredLine($"[{Interlocked.Increment(currentFileIndex).ToString("N0").PadLeft(currentFileIndexPadding, " "c):N0} / {totalSourceFileCount:N0}] [SUCCESS] {Path.GetFileName(filePath)} -> {folderName} (L*={averageL:F1})", ConsoleColor.Green)
                                 totalMovedFiles += 1
                             End If
 
                         Catch ex As ArgumentException When (ex.HResult = -2147024809)
-                            Program.WriteColoredLine($"[{Interlocked.Increment(currentFileIndex).ToString("N0").PadLeft(currentFileIndexPadding, " "c):N0} / {totalSourceFileCount:N0}] [ERROR] {Path.GetFileName(filePath)} -> HResult: {ex.HResult} (0x{ex.HResult:X8}) - Corrupted file or unsupported image format (file extension may not be correct).", ConsoleColor.Red)
+                            ConsoleHelper.WriteColoredLine($"[{Interlocked.Increment(currentFileIndex).ToString("N0").PadLeft(currentFileIndexPadding, " "c):N0} / {totalSourceFileCount:N0}] [ERROR] {Path.GetFileName(filePath)} -> HResult: {ex.HResult} (0x{ex.HResult}) - Corrupted file or unsupported image format (file extension may not be correct).", ConsoleColor.Red)
                             totalFailedFiles += 1
 
                         Catch ex As Exception
-                            Program.WriteColoredLine($"[{Interlocked.Increment(currentFileIndex).ToString("N0").PadLeft(currentFileIndexPadding, " "c):N0} / {totalSourceFileCount:N0}] [ERROR] {Path.GetFileName(filePath)} -> HResult: {ex.HResult} (0x{ex.HResult:X8}) - {ex.Message}", ConsoleColor.Red)
+                            ConsoleHelper.WriteColoredLine($"[{Interlocked.Increment(currentFileIndex).ToString("N0").PadLeft(currentFileIndexPadding, " "c):N0} / {totalSourceFileCount:N0}] [ERROR] {Path.GetFileName(filePath)} -> HResult: {ex.HResult} (0x{ex.HResult}) - {ex.Message}", ConsoleColor.Red)
                             totalFailedFiles += 1
 
                         Finally
@@ -297,118 +324,41 @@ Public Module Program
 
         Catch ex As Exception
             Console.WriteLine()
-            Program.ExitWithMessage($"FATAL ERROR 0x{ex.HResult:X8}: {ex.Message}", exitCode:=ex.HResult, ConsoleColor.Red)
+            ConsoleHelper.ExitWithMessage($"FATAL ERROR 0x{ex.HResult}: {ex.Message}", exitCode:=ex.HResult, ConsoleColor.Red)
 
         End Try
 
         Dim exitCode As Integer = If(totalFailedFiles = 0, 0, 1)
         Dim exitColor As ConsoleColor = If(exitCode = 0, ConsoleColor.Green, ConsoleColor.Red)
-        Program.ExitWithMessage($"All files have been processed. Success: {totalMovedFiles:N0}, Failed: {totalFailedFiles:N0}.", exitCode, exitColor)
+        ConsoleHelper.ExitWithMessage($"All files have been processed. Success: {totalMovedFiles:N0}, Failed: {totalFailedFiles:N0}.", exitCode, exitColor)
     End Sub
 
 #End Region
 
 #Region " Private Methods "
 
-    ''' <summary>
-    ''' Maps an average CIE L* value (0–100) to a folder name representing a lightness range (10% increments).
-    ''' </summary>
-    ''' 
-    ''' <param name="averageL">
-    ''' The average CIE L* lightness value (0 to 100).
-    ''' </param>
-    ''' 
-    ''' <returns>
-    ''' A folder name indicating the lightness range:
-    ''' - "Light 00%-10%" for very dark images (L* = 0-10)
-    ''' - "Light 10%-20%", "Light 20%-30%", ..., "Light 80%-90%" for intermediate values
-    ''' - "Light 90%-100%" for very bright colors (L* >= 90)
-    ''' </returns>
-    ''' 
-    ''' <remarks>
-    ''' Folder names are sorted alphabetically from darkest to brightest,
-    ''' allowing easy visual sorting of images by luminosity in 10% lightness intervals.
-    ''' </remarks>
-    Private Function LightnessToFolderName(averageL As Double) As String
-
-        Dim pct As Integer = CInt(Math.Round(averageL))
-        pct = Math.Max(0, Math.Min(100, pct))
-
-        If pct = 0 Then
-            Return "Light 00%-10%"
-        End If
-
-        If pct >= 90 Then
-            Return "Light 90%-100%"
-        End If
-
-        Dim groupBase As Integer = (pct \ 10) * 10
-        Dim lo As Integer = groupBase
-        Dim hi As Integer = groupBase + 10
-
-        Return $"Light {lo:D2}-{hi:D2}%"
-    End Function
 
     ''' <summary>
-    ''' Writes a message to the console in a specified foreground color, 
-    ''' then resets the color back to the original.
-    ''' </summary>
-    ''' 
-    ''' <param name="message">
-    ''' The message to display. If empty or null, no message is displayed.
-    ''' </param>
-    ''' 
-    ''' <param name="foreColor">
-    ''' The console foreground color to use when displaying the message. 
+    ''' Prints command-line usage information to the console. 
     ''' <para></para>
-    ''' After writing the message, the console color is reset to its original value.
-    ''' </param>
-    <DebuggerStepThrough>
-    Private Sub WriteColoredLine(message As String, foreColor As ConsoleColor)
-
-        SyncLock Program.syncLockObject
-            Dim originalForeColor As ConsoleColor = Console.ForegroundColor
-            Console.ForegroundColor = foreColor
-            Console.WriteLine(message)
-            Console.ForegroundColor = originalForeColor
-        End SyncLock
-    End Sub
-
-    ''' <summary>
-    ''' Displays a message to the console and exits the application with the specified exit code.
+    ''' Called whenever a mandatory or optional argument is missing or invalid.
     ''' </summary>
-    ''' 
-    ''' <param name="message">
-    ''' The message to display before exiting. If empty or null, no message is displayed.
-    ''' </param>
-    ''' 
-    ''' <param name="exitCode">
-    ''' The exit code to return to the operating system. Typically 0 for success, non-zero for errors.
-    ''' </param>
-    ''' 
-    ''' <param name="foreColor">
-    ''' The console foreground color to use when displaying the message. 
-    ''' <para></para>
-    ''' After writing the message, the console color is reset to its original value.
-    ''' </param>
     <DebuggerStepThrough>
-    Private Sub ExitWithMessage(message As String, exitCode As Integer, foreColor As ConsoleColor)
+    Private Sub ShowUsage()
 
-        SyncLock Program.syncLockObject
-            If Not String.IsNullOrEmpty(message) Then
-                WriteColoredLine(message, foreColor)
-                Console.WriteLine()
-            End If
+        Dim executableName As String = $"{Process.GetCurrentProcess().ProcessName}.exe"
 
-            Console.WriteLine($"Exiting application with exit code: {exitCode} (0x{exitCode:X8}) ...")
-#If DEBUG Then
-            Console.WriteLine()
-            Program.WriteColoredLine("[!] This message only appears in DEBUG mode to prevent accidental termination.", ConsoleColor.Yellow)
-            Console.WriteLine("Press any key to exit...")
-            Console.ReadKey(intercept:=True)
-#End If
-            Environment.Exit(exitCode)
-        End SyncLock
+        ConsoleHelper.WriteColoredLine("Usage:", ConsoleColor.DarkCyan)
+        Console.WriteLine($"  {executableName} <directory_path> [percentage_step]")
+        Console.WriteLine()
+        ConsoleHelper.WriteColoredLine("Arguments:", ConsoleColor.DarkCyan)
+        Console.WriteLine("  directory_path    Path to the directory containing image files to be processed.")
+        Console.WriteLine("  percentage_step   Optional. An integer from 1 to 10 indicating folder percentage ranges (Default is 10).")
+        Console.WriteLine()
+        ConsoleHelper.WriteColoredLine("Examples:", ConsoleColor.DarkCyan)
+        Console.WriteLine($"  {executableName} ""C:\MyImages""")
+        Console.WriteLine($"  {executableName} ""C:\MyImages"" 5")
+        Console.WriteLine()
     End Sub
 
 #End Region

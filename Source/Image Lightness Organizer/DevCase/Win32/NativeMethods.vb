@@ -1,5 +1,4 @@
-﻿
-#Region " Option Statements "
+﻿#Region " Option Statements "
 
 Option Strict On
 Option Explicit On
@@ -22,9 +21,13 @@ Friend Module NativeMethods
 
 #Region " shlwapi.dll "
 
+#If Not NETCOREAPP Then
+
     <DllImport("shlwapi.dll", SetLastError:=False, CharSet:=CharSet.Unicode, ExactSpelling:=True)>
     Friend Function StrCmpLogicalW(first As String, second As String) As Integer
     End Function
+    
+#End If
 
     <DllImport("kernel32.dll", CharSet:=CharSet.Auto, SetLastError:=True)>
     Friend Function GlobalMemoryStatusEx(ByRef refBuffer As MEMORYSTATUSEX) As <MarshalAs(UnmanagedType.Bool)> Boolean

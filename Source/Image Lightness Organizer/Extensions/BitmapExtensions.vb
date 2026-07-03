@@ -82,7 +82,7 @@ Public Module BitmapExtensions
         Const LStarOffset As Double = 16.0R
 
         If BitmapExtensions.LinearSrgbLut Is Nothing Then
-            BitmapExtensions.LinearSrgbLut = UtilColor.BuildLinearSRGBLookupTable()
+            BitmapExtensions.LinearSrgbLut = ColorHelper.BuildLinearSRGBLookupTable()
         End If
 
         Dim rect As New Rectangle(0, 0, sourceBitmap.Width, sourceBitmap.Height)
@@ -130,7 +130,7 @@ Public Module BitmapExtensions
                     ' Step 2: Calculate Perceptual Lightness (L*) 
                     ' This transforms physical light into human perceived brightness [0-100].
                     ' Note: ComputeLabF FUNCTION applies the cube root or linear slope per CIE specs.
-                    totalL += (LStarScale * UtilColor.ComputeLabF(relY)) - LStarOffset
+                    totalL += (LStarScale * ColorHelper.ComputeLabF(relY)) - LStarOffset
                     pixelCount += 1L
                 Next
             Next

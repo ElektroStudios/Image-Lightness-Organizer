@@ -1,4 +1,11 @@
 ﻿
+#If Not NETCOREAPP Then
+
+' ***********************************************************************
+' Author   : ElektroStudios
+' Modified : 06-January-2016
+' ***********************************************************************
+
 #Region " Option Statements "
 
 Option Strict On
@@ -7,11 +14,17 @@ Option Infer Off
 
 #End Region
 
+#Region " Imports "
+
+Imports System.Collections.Generic
+
+#End Region
+
 #Region " Comparer Result "
 
 ' ReSharper disable once CheckNamespace
 
-Namespace Global.DevCase.Runtime.TypeComparers
+Namespace DevCase.Runtime.TypeComparers
 
     ''' <summary>
     ''' Specifies a result for <see cref="IComparer.Compare"/> function.
@@ -42,3 +55,5 @@ Namespace Global.DevCase.Runtime.TypeComparers
 End Namespace
 
 #End Region
+
+#End If

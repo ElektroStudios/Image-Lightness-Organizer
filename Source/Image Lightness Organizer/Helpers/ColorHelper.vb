@@ -1,4 +1,5 @@
-﻿#Region " Option Statements "
+﻿
+#Region " Option Statements "
 
 Option Strict On
 Option Explicit On
@@ -6,7 +7,9 @@ Option Infer Off
 
 #End Region
 
-Public NotInheritable Class UtilColor
+Public Module ColorHelper
+
+#Region " Static Methods "
 
     ''' <summary>
     ''' Applies the CIE XYZn to L*a*b* (CIELAB) transfer function (also known as the f-function)
@@ -53,7 +56,7 @@ Public NotInheritable Class UtilColor
     ''' <see href="https://en.wikipedia.org/wiki/Relative_luminance"/>
     ''' </remarks>
     <DebuggerStepThrough>
-    Public Shared Function ComputeLabF(value As Double) As Double
+    Friend Function ComputeLabF(value As Double) As Double
 
         Const Epsilon As Double = 0.008856R
         Const Kappa As Double = 903.3R
@@ -101,7 +104,7 @@ Public NotInheritable Class UtilColor
     ''' For more technical details, see: <see href="https://en.wikipedia.org/wiki/SRGB#The_forward_transformation_(gamma_compression)"/>
     ''' </remarks>
     <DebuggerStepThrough>
-    Public Shared Function BuildLinearSRGBLookupTable() As IReadOnlyList(Of Double)
+    Friend Function BuildLinearSRGBLookupTable() As IReadOnlyList(Of Double)
 
         ' --- sRGB Standard Constants ---
 
@@ -137,4 +140,51 @@ Public NotInheritable Class UtilColor
         Return Array.AsReadOnly(lut)
     End Function
 
-End Class
+    ''' <summary>
+    ''' Maps an average CIE L* value (0–100) to a folder name representing a lightness range determined by the specified step value.
+    ''' </summary>
+    ''' 
+    ''' <param name="averageL">
+    ''' The average CIE L* lightness value (0 to 100).
+    ''' </param>
+    ''' 
+    ''' <param name="stepSize">
+    ''' The percentage interval step size used to group the ranges (from 1 to 10).
+    ''' <para></para>
+    ''' For example, a value of 5 creates folder names in 5% increments, while 10 creates them in 10% increments.
+    ''' </param>
+    ''' 
+    ''' <returns>
+    ''' A folder name indicating the lightness range:
+    ''' <para></para>
+    ''' - "Light 00%-[stepSize]%" for very dark images (L* = 0 to stepSize)
+    ''' <para></para>
+    ''' - Intermediate interval values scaled by the step size (e.g., "Light 05%-10%", "Light 10%-15%" for a step size of 5)
+    ''' <para></para>
+    ''' - "Light [100 - stepSize]%-100%" for very bright colors (L* >= 100 - stepSize)
+    ''' </returns>
+    <DebuggerStepThrough>
+    Friend Function LightnessToFolderName(averageL As Double, stepSize As Integer) As String
+
+        Dim pct As Integer = CInt(Math.Round(averageL))
+        pct = Math.Max(0, Math.Min(100, pct))
+
+        If pct = 0 Then
+            Return $"Light 00%-{stepSize:D2}%"
+        End If
+
+        Dim limitHigh As Integer = 100 - stepSize
+        If pct >= limitHigh Then
+            Return $"Light {limitHigh:D2}-100%"
+        End If
+
+        Dim groupBase As Integer = (pct \ stepSize) * stepSize
+        Dim lo As Integer = groupBase
+        Dim hi As Integer = groupBase + stepSize
+
+        Return $"Light {lo:D2}-{hi:D2}%"
+    End Function
+
+#End Region
+
+End Module

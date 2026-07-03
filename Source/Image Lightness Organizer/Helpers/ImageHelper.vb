@@ -1,4 +1,5 @@
-﻿#Region " Option Statements "
+﻿
+#Region " Option Statements "
 
 Option Strict On
 Option Explicit On
@@ -17,7 +18,9 @@ Imports SkiaSharp
 
 #End Region
 
-Public NotInheritable Class UtilImage
+Friend Module ImageHelper
+
+#Region " Static Methods "
 
     ''' <summary>
     ''' Computes the average CIE L* lightness of the specified image file.
@@ -48,7 +51,9 @@ Public NotInheritable Class UtilImage
     ''' <returns>
     ''' Average CIE L* value in the range [0.0, 100.0], or 0.0 if all pixels are below the alpha threshold.
     ''' </returns>
-    Public Shared Function ComputeAverageLightness(filePath As String, Optional alphaThreshold As Byte = 8) As Double
+    <DebuggerStepThrough>
+    Friend Function ComputeAverageLightness(filePath As String, Optional alphaThreshold As Byte = 8) As Double
+
         Dim fileExtension As String = Path.GetExtension(filePath).ToLowerInvariant()
 
         If fileExtension = ".avif" OrElse
@@ -114,5 +119,7 @@ Public NotInheritable Class UtilImage
 
     End Function
 
-End Class
+#End Region
+
+End Module
 

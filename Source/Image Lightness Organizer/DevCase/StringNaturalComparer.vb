@@ -1,4 +1,7 @@
-﻿#Region " Option Statements "
+﻿
+#If Not NETCOREAPP Then
+
+#Region " Option Statements "
 
 Option Strict On
 Option Explicit On
@@ -8,7 +11,8 @@ Option Infer Off
 
 #Region " Imports "
 
-Imports ImageLightnessOrganizer
+Imports System.Collections.Generic
+Imports System.Diagnostics
 
 #End Region
 
@@ -16,7 +20,7 @@ Imports ImageLightnessOrganizer
 
 ' ReSharper disable once CheckNamespace
 
-Namespace Global.DevCase.Runtime.TypeComparers
+Namespace DevCase.Runtime.TypeComparers
 
     ''' <summary>
     ''' Performs a natural sort order string comparison between two <see cref="String"/> objects.
@@ -117,3 +121,5 @@ Namespace Global.DevCase.Runtime.TypeComparers
 End Namespace
 
 #End Region
+
+#End If
