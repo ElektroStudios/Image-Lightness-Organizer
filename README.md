@@ -82,6 +82,8 @@ image-classification
     <a href="https://en.wikipedia.org/wiki/Spanish_Empire"><img src="https://img.shields.io/badge/Made_in-Spain_%F0%9F%87%AA%F0%9F%87%B8-AA151B?style=flat" alt="Made in Spain"></a>
 </p>
 
+------------------
+
 ## 👋 Introduction
 
 **Image Lightness Organizer** is designed to analyze and categorize local image collections. By computing the average lightness ($L^*$) of each image using the scientifically accurate **CIE L* color space**, the application eliminates manual sorting, grouping your media files into structured, percentage-based luminance brackets.
