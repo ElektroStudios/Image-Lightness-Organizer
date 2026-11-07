@@ -21,12 +21,17 @@ Public Module ImageExtensions
     ''' Computes the average CIE L* lightness of the specified <see cref="Image"/>.
     ''' </summary>
     ''' 
-    ''' <param name="bitmap">
-    ''' Source bitmap in <see cref="PixelFormat.Format32bppArgb"/> format.
+    ''' <param name="sourceImage">
+    ''' Source image in any pixel format. 
+    ''' <para></para>
+    ''' If it is not a <see cref="Bitmap"/> in <see cref="PixelFormat.Format32bppArgb"/> format, 
+    ''' a temporary converted copy is created; the source image is never modified nor disposed.
     ''' </param>
     ''' 
     ''' <param name="alphaThreshold">
     ''' Optional alpha threshold below which a pixel is considered fully transparent and excluded from the lightness average.
+    ''' <para></para>
+    ''' Pixels whose alpha value is strictly lower than this threshold are excluded.
     ''' <para></para>
     ''' Range: 0–255. A value of 0 includes all pixels; 255 includes only fully opaque pixels.
     ''' <para></para>
@@ -36,6 +41,10 @@ Public Module ImageExtensions
     ''' <returns>
     ''' Average CIE L* value in the range [0.0, 100.0], or 0.0 if all pixels are below the alpha threshold.
     ''' </returns>
+    ''' 
+    ''' <exception cref="ArgumentNullException">
+    ''' Thrown when <paramref name="sourceImage"/> is <see langword="Nothing"/>.
+    ''' </exception>
     <Extension>
     Public Function ComputeAverageLightness(sourceImage As Image, Optional alphaThreshold As Byte = 8) As Double
 

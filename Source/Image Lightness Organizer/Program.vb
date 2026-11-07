@@ -145,7 +145,7 @@ Public Module Program
 
         Dim stepPercentage As Integer = Program.DefaultStepPercentage
         If args.Length >= 2 Then
-            If Not Integer.TryParse(args(1), NumberStyles.Integer, Program.CultureInfoEnUs, stepPercentage) OrElse stepPercentage < 1 OrElse stepPercentage > 10 Then
+            If Not Program.TryParseStepPercentage(args(1), stepPercentage) Then
                 Program.ShowUsage()
                 ConsoleHelper.ExitWithMessage("[ERROR] The percentage step value must be an integer between 1 and 10.", exitCode:=5, ConsoleColor.Red)
             End If
@@ -171,17 +171,9 @@ Public Module Program
 
             Dim sourceFiles As New SortedSet(Of String)(
                 Directory.GetFiles(sourceDirPathExtended, "*.*", SearchOption.TopDirectoryOnly).
-                          Where(Function(f As String)
-                                    If Path.HasExtension(f) Then
-                                        Dim ext As String = Path.GetExtension(f)
-                                        Return Program.SupportedImageFileExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase)
-                                    Else
-                                        Return False
-                                    End If
-                                End Function), filePathComparer)
+                          Where(AddressOf Program.IsSupportedImageFile), filePathComparer)
 
-            Dim totalSourceFileCount As Integer =
-                If(sourceFiles Is Nothing, 0, sourceFiles.Count)
+            Dim totalSourceFileCount As Integer = sourceFiles.Count
 
             If totalSourceFileCount = 0 Then
                 Dim exitMsg As String = $"[ERROR] No supported image files were found in source directory: {sourceDirPath}"
@@ -215,27 +207,11 @@ Public Module Program
             ConsoleHelper.WriteColoredLine($"Available total memory : {availableMemoryGB:F2} GB", ConsoleColor.DarkCyan)
 
             ' Calculate safe parallelism degree based on memory constraints.
-            Dim maxParallelism As Integer
-            Dim safeParallelismByMemory As Integer
-            If Program.isX86 Then
-                maxParallelism = 1
-                safeParallelismByMemory = 1
-
-            Else
-                safeParallelismByMemory =
-                    Convert.ToInt32(Math.Floor(availableMemoryGB / Program.MaxEstimatedMemoryRequiredPerThreadGB))
-
-                ' Ensure at least 1 thread runs if memory is extremely low.
-                If safeParallelismByMemory < 1 Then
-                    safeParallelismByMemory = 1
-                End If
-
-                ' Cap the parallelism so it never exceeds the CPU core count.
-                maxParallelism = Environment.ProcessorCount
-                If safeParallelismByMemory < maxParallelism Then
-                    maxParallelism = safeParallelismByMemory
-                End If
-            End If
+            Dim maxParallelism As Integer =
+                Program.CalculateMaxDegreeOfParallelism(availableMemoryGB,
+                                                        Program.MaxEstimatedMemoryRequiredPerThreadGB,
+                                                        Environment.ProcessorCount,
+                                                        Program.isX86)
 
             If Not Program.isX86 Then
                 ConsoleHelper.WriteColoredLine($"[INFO] CPU Cores: {Environment.ProcessorCount}", ConsoleColor.Magenta)
@@ -258,7 +234,9 @@ Public Module Program
             ConsoleHelper.WriteColoredLine("Press 'Y' key to start processing the files, or 'Escape' key to exit...", ConsoleColor.Yellow)
             ConsoleHelper.WriteColoredLine("[!] This message only appears in DEBUG mode to prevent accidental execution.", ConsoleColor.Yellow)
             Console.WriteLine()
-            Do
+            ' Console.ReadKey throws InvalidOperationException when the standard input is redirected
+            ' (e.g., when the application is launched by automated tests or piped scripts).
+            Do Until Console.IsInputRedirected
                 Dim keyInfo As ConsoleKeyInfo = Console.ReadKey(intercept:=True)
                 If keyInfo.Key = ConsoleKey.Y Then
                     Exit Do
@@ -292,20 +270,20 @@ Public Module Program
 
                             If File.Exists(destinationFilePath) Then
                                 ConsoleHelper.WriteColoredLine($"[{Interlocked.Increment(currentFileIndex).ToString("N0").PadLeft(currentFileIndexPadding, " "c):N0} / {totalSourceFileCount:N0}] [WARN] Cannot move file. The destination file already exists in output directory: {destinationFilePath}.", ConsoleColor.Yellow)
-                                totalFailedFiles += 1
+                                Interlocked.Increment(totalFailedFiles)
                             Else
                                 File.Move(filePath, destinationFilePath)
                                 ConsoleHelper.WriteColoredLine($"[{Interlocked.Increment(currentFileIndex).ToString("N0").PadLeft(currentFileIndexPadding, " "c):N0} / {totalSourceFileCount:N0}] [SUCCESS] {Path.GetFileName(filePath)} -> {folderName} (L*={averageL:F1})", ConsoleColor.Green)
-                                totalMovedFiles += 1
+                                Interlocked.Increment(totalMovedFiles)
                             End If
 
                         Catch ex As ArgumentException When (ex.HResult = -2147024809)
                             ConsoleHelper.WriteColoredLine($"[{Interlocked.Increment(currentFileIndex).ToString("N0").PadLeft(currentFileIndexPadding, " "c):N0} / {totalSourceFileCount:N0}] [ERROR] {Path.GetFileName(filePath)} -> HResult: {ex.HResult} (0x{ex.HResult}) - Corrupted file or unsupported image format (file extension may not be correct).", ConsoleColor.Red)
-                            totalFailedFiles += 1
+                            Interlocked.Increment(totalFailedFiles)
 
                         Catch ex As Exception
                             ConsoleHelper.WriteColoredLine($"[{Interlocked.Increment(currentFileIndex).ToString("N0").PadLeft(currentFileIndexPadding, " "c):N0} / {totalSourceFileCount:N0}] [ERROR] {Path.GetFileName(filePath)} -> HResult: {ex.HResult} (0x{ex.HResult}) - {ex.Message}", ConsoleColor.Red)
-                            totalFailedFiles += 1
+                            Interlocked.Increment(totalFailedFiles)
 
                         Finally
                             If Program.isX86 Then
@@ -332,6 +310,137 @@ Public Module Program
         Dim exitColor As ConsoleColor = If(exitCode = 0, ConsoleColor.Green, ConsoleColor.Red)
         ConsoleHelper.ExitWithMessage($"All files have been processed. Success: {totalMovedFiles:N0}, Failed: {totalFailedFiles:N0}.", exitCode, exitColor)
     End Sub
+
+#End Region
+
+#Region " Friend Methods "
+
+    ''' <summary>
+    ''' Determines whether the specified file has one of the supported image file extensions (case-insensitive).
+    ''' </summary>
+    '''
+    ''' <param name="filePath">
+    ''' The path or name of the file to check.
+    ''' </param>
+    '''
+    ''' <returns>
+    ''' <see langword="True"/> if the file extension is supported; otherwise, <see langword="False"/>.
+    ''' </returns>
+    '''
+    ''' <exception cref="ArgumentNullException">
+    ''' Thrown when <paramref name="filePath"/> is <see langword="Nothing"/>.
+    ''' </exception>
+    <DebuggerStepThrough>
+    Friend Function IsSupportedImageFile(filePath As String) As Boolean
+
+        ArgumentNullException.ThrowIfNull(filePath)
+
+        If Not Path.HasExtension(filePath) Then
+            Return False
+        End If
+
+        Dim fileExtension As String = Path.GetExtension(filePath)
+        Return Program.SupportedImageFileExtensions.Contains(fileExtension)
+    End Function
+
+    ''' <summary>
+    ''' Parses the optional percentage step command-line argument.
+    ''' </summary>
+    '''
+    ''' <param name="value">
+    ''' The command-line argument value to parse.
+    ''' </param>
+    '''
+    ''' <param name="refResult">
+    ''' When this method returns <see langword="True"/>, contains the parsed percentage step value;
+    ''' otherwise, contains zero.
+    ''' </param>
+    '''
+    ''' <returns>
+    ''' <see langword="True"/> if <paramref name="value"/> is an integer between
+    ''' <see cref="ColorHelper.MinStepSize"/> and <see cref="ColorHelper.MaxStepSize"/> (inclusive);
+    ''' otherwise, <see langword="False"/>.
+    ''' </returns>
+    <DebuggerStepThrough>
+    Friend Function TryParseStepPercentage(value As String, ByRef refResult As Integer) As Boolean
+
+        Dim parsedValue As Integer
+        If Integer.TryParse(value, NumberStyles.Integer, Program.CultureInfoEnUs, parsedValue) AndAlso
+           parsedValue >= ColorHelper.MinStepSize AndAlso
+           parsedValue <= ColorHelper.MaxStepSize Then
+
+            refResult = parsedValue
+            Return True
+        End If
+
+        refResult = 0
+        Return False
+    End Function
+
+    ''' <summary>
+    ''' Calculates a safe <see cref="ParallelOptions.MaxDegreeOfParallelism"/> value
+    ''' based on the available physical memory and the number of processors.
+    ''' </summary>
+    '''
+    ''' <param name="availableMemoryGB">
+    ''' The available physical memory, in Gigabytes (GB).
+    ''' </param>
+    '''
+    ''' <param name="memoryRequiredPerThreadGB">
+    ''' The maximum estimated amount of memory, in Gigabytes (GB), required by a single thread.
+    ''' </param>
+    '''
+    ''' <param name="processorCount">
+    ''' The number of processors available to the current process.
+    ''' </param>
+    '''
+    ''' <param name="isX86Process">
+    ''' A value indicating whether the current process is running under the x86 (32-bit) architecture.
+    ''' </param>
+    '''
+    ''' <returns>
+    ''' Always 1 for x86 processes.
+    ''' <para></para>
+    ''' Otherwise, the number of threads that fit in the available memory budget,
+    ''' never lower than 1 and never greater than <paramref name="processorCount"/>.
+    ''' </returns>
+    '''
+    ''' <exception cref="ArgumentOutOfRangeException">
+    ''' Thrown when <paramref name="availableMemoryGB"/> is negative or not a finite number,
+    ''' when <paramref name="memoryRequiredPerThreadGB"/> is zero, negative or not a finite number,
+    ''' or when <paramref name="processorCount"/> is lower than 1.
+    ''' </exception>
+    <DebuggerStepThrough>
+    Friend Function CalculateMaxDegreeOfParallelism(availableMemoryGB As Double,
+                                                    memoryRequiredPerThreadGB As Double,
+                                                    processorCount As Integer,
+                                                    isX86Process As Boolean) As Integer
+
+        If Not Double.IsFinite(availableMemoryGB) OrElse availableMemoryGB < 0.0R Then
+            Throw New ArgumentOutOfRangeException(NameOf(availableMemoryGB), availableMemoryGB,
+                                                  "The available memory must be a finite, non-negative number.")
+        End If
+
+        If Not Double.IsFinite(memoryRequiredPerThreadGB) OrElse memoryRequiredPerThreadGB <= 0.0R Then
+            Throw New ArgumentOutOfRangeException(NameOf(memoryRequiredPerThreadGB), memoryRequiredPerThreadGB,
+                                                  "The memory required per thread must be a finite, positive number.")
+        End If
+
+        ArgumentOutOfRangeException.ThrowIfLessThan(processorCount, 1)
+
+        If isX86Process Then
+            Return 1
+        End If
+
+        ' Clamp in Double space first, to avoid overflow when converting huge ratios to Integer.
+        Dim safeParallelismByMemory As Double = Math.Floor(availableMemoryGB / memoryRequiredPerThreadGB)
+
+        ' Ensure at least 1 thread runs if memory is extremely low,
+        ' and cap the parallelism so it never exceeds the CPU core count.
+        Dim clampedParallelism As Double = Math.Max(1.0R, Math.Min(safeParallelismByMemory, processorCount))
+
+        Return Convert.ToInt32(clampedParallelism)
+    End Function
 
 #End Region
 
@@ -363,4 +472,4 @@ Public Module Program
 
 #End Region
 
-End Module
+End Module

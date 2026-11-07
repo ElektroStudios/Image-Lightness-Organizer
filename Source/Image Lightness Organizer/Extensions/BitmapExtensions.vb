@@ -27,7 +27,7 @@ Public Module BitmapExtensions
     ''' Used by function: <see cref="BitmapExtensions.ComputeAverageLightness(Bitmap, Byte)"/> 
     ''' to convert sRGB pixel values to linear light for accurate luminance calculations.
     ''' </remarks>
-    Private LinearSrgbLut As IReadOnlyList(Of Double)
+    Private ReadOnly LinearSrgbLut As IReadOnlyList(Of Double) = ColorHelper.BuildLinearSRGBLookupTable()
 
     ''' <summary>
     ''' Computes the average CIE L* lightness of the specified <see cref="Bitmap"/>.
@@ -39,12 +39,14 @@ Public Module BitmapExtensions
     ''' which handles proper <see cref="Bitmap"/> format conversion automatically.
     ''' </summary>
     ''' 
-    ''' <param name="bitmap">
+    ''' <param name="sourceBitmap">
     ''' Source bitmap in <see cref="PixelFormat.Format32bppArgb"/> format.
     ''' </param>
     ''' 
     ''' <param name="alphaThreshold">
     ''' Optional alpha threshold below which a pixel is considered fully transparent and excluded from the lightness average.
+    ''' <para></para>
+    ''' Pixels whose alpha value is strictly lower than this threshold are excluded.
     ''' <para></para>
     ''' Range: 0–255. A value of 0 includes all pixels; 255 includes only fully opaque pixels.
     ''' <para></para>
@@ -54,14 +56,22 @@ Public Module BitmapExtensions
     ''' <returns>
     ''' Average CIE L* value in the range [0.0, 100.0], or 0.0 if all pixels are below the alpha threshold.
     ''' </returns>
+    ''' 
+    ''' <exception cref="ArgumentNullException">
+    ''' Thrown when <paramref name="sourceBitmap"/> is <see langword="Nothing"/>.
+    ''' </exception>
+    ''' 
+    ''' <exception cref="NotSupportedException">
+    ''' Thrown when <paramref name="sourceBitmap"/> is not in <see cref="PixelFormat.Format32bppArgb"/> format.
+    ''' </exception>
     <Extension>
     Public Function ComputeAverageLightness(sourceBitmap As Bitmap, Optional alphaThreshold As Byte = 8) As Double
 
 #If NETCOREAPP Then
         ArgumentNullException.ThrowIfNull(sourceBitmap)
 #Else
-        If bitmap Is Nothing Then
-            Throw New ArgumentNullException(NameOf(bitmap))
+        If sourceBitmap Is Nothing Then
+            Throw New ArgumentNullException(NameOf(sourceBitmap))
         End If
 #End If
 
@@ -80,10 +90,6 @@ Public Module BitmapExtensions
         ' Used to transform relative luminance (Y) into perceptual lightness (L*).
         Const LStarScale As Double = 116.0R
         Const LStarOffset As Double = 16.0R
-
-        If BitmapExtensions.LinearSrgbLut Is Nothing Then
-            BitmapExtensions.LinearSrgbLut = ColorHelper.BuildLinearSRGBLookupTable()
-        End If
 
         Dim rect As New Rectangle(0, 0, sourceBitmap.Width, sourceBitmap.Height)
         Dim bmpData As BitmapData = sourceBitmap.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb)
@@ -112,7 +118,7 @@ Public Module BitmapExtensions
 
                     ' Format32bppArgb byte layout: B=idx+0, G=idx+1, R=idx+2, A=idx+3
                     Dim alpha As Byte = pixels(idx + 3)
-                    If alpha <= alphaThreshold Then
+                    If alpha < alphaThreshold Then
                         Continue For
                     End If
 

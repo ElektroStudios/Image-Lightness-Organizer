@@ -64,12 +64,16 @@ Friend Module ConsoleHelper
                 Console.WriteLine()
             End If
 
-            Console.WriteLine($"Exiting application with exit code: {exitCode} (0x{exitCode}) ...")
+            Console.WriteLine($"Exiting application with exit code: {exitCode} (0x{exitCode:X1}) ...")
 #If DEBUG Then
-            Console.WriteLine()
-            ConsoleHelper.WriteColoredLine("[!] This message only appears in DEBUG mode to prevent accidental termination.", ConsoleColor.Yellow)
-            Console.WriteLine("Press any key to exit...")
-            Console.ReadKey(intercept:=True)
+            ' Console.ReadKey throws InvalidOperationException when the standard input is redirected
+            ' (e.g., when the application is launched by automated tests or piped scripts).
+            If Not Console.IsInputRedirected Then
+                Console.WriteLine()
+                ConsoleHelper.WriteColoredLine("[!] This message only appears in DEBUG mode to prevent accidental termination.", ConsoleColor.Yellow)
+                Console.WriteLine("Press any key to exit...")
+                Console.ReadKey(intercept:=True)
+            End If
 #End If
             Environment.Exit(exitCode)
         End SyncLock

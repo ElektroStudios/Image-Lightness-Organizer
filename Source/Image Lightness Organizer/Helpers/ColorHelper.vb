@@ -9,6 +9,20 @@ Option Infer Off
 
 Public Module ColorHelper
 
+#Region " Constants "
+
+    ''' <summary>
+    ''' The minimum allowed percentage step size for <see cref="ColorHelper.LightnessToFolderName"/> function.
+    ''' </summary>
+    Friend Const MinStepSize As Integer = 1
+
+    ''' <summary>
+    ''' The maximum allowed percentage step size for <see cref="ColorHelper.LightnessToFolderName"/> function.
+    ''' </summary>
+    Friend Const MaxStepSize As Integer = 10
+
+#End Region
+
 #Region " Static Methods "
 
     ''' <summary>
@@ -93,7 +107,7 @@ Public Module ColorHelper
     ''' </example>
     ''' 
     ''' <returns>
-    ''' A readon-only list of 256 <see cref="Double"/> values representing normalized linear light intensities in the range [0.0, 1.0].
+    ''' A read-only list of 256 <see cref="Double"/> values representing normalized linear light intensities in the range [0.0, 1.0].
     ''' </returns>
     ''' 
     ''' <remarks>
@@ -161,28 +175,45 @@ Public Module ColorHelper
     ''' <para></para>
     ''' - Intermediate interval values scaled by the step size (e.g., "Light 05%-10%", "Light 10%-15%" for a step size of 5)
     ''' <para></para>
-    ''' - "Light [100 - stepSize]%-100%" for very bright colors (L* >= 100 - stepSize)
+    ''' - "Light [lastGroupBase]%-100%" for the brightest images, where the upper bound is always capped to 100%
+    ''' (e.g., "Light 90%-100%" for a step size of 10, or "Light 98%-100%" for a step size of 7).
     ''' </returns>
+    '''
+    ''' <remarks>
+    ''' The lightness value is clamped to the range [0, 100] and rounded to the nearest integer percentage.
+    ''' <para></para>
+    ''' Each range includes its lower bound and excludes its upper bound,
+    ''' except the last range, which also includes 100%.
+    ''' <para></para>
+    ''' The returned ranges never overlap, even when <paramref name="stepSize"/> is not an exact divisor of 100.
+    ''' </remarks>
+    '''
+    ''' <exception cref="ArgumentOutOfRangeException">
+    ''' Thrown when <paramref name="averageL"/> is not a finite number,
+    ''' or when <paramref name="stepSize"/> is not in the range 1 to 10.
+    ''' </exception>
     <DebuggerStepThrough>
     Friend Function LightnessToFolderName(averageL As Double, stepSize As Integer) As String
 
-        Dim pct As Integer = CInt(Math.Round(averageL))
-        pct = Math.Max(0, Math.Min(100, pct))
-
-        If pct = 0 Then
-            Return $"Light 00%-{stepSize:D2}%"
+        If Not Double.IsFinite(averageL) Then
+            Throw New ArgumentOutOfRangeException(NameOf(averageL), averageL, "The lightness value must be a finite number.")
         End If
 
-        Dim limitHigh As Integer = 100 - stepSize
-        If pct >= limitHigh Then
-            Return $"Light {limitHigh:D2}-100%"
+        If stepSize < ColorHelper.MinStepSize OrElse stepSize > ColorHelper.MaxStepSize Then
+            Throw New ArgumentOutOfRangeException(NameOf(stepSize), stepSize,
+                $"The step size must be an integer between {ColorHelper.MinStepSize} and {ColorHelper.MaxStepSize}.")
         End If
 
-        Dim groupBase As Integer = (pct \ stepSize) * stepSize
+        ' Clamp before rounding to avoid overflow on out-of-range values.
+        Dim clampedL As Double = Math.Max(0.0R, Math.Min(100.0R, averageL))
+        Dim pct As Integer = Convert.ToInt32(Math.Round(clampedL))
+
+        ' 100% belongs to the last range (the one that contains 99%).
+        Dim groupBase As Integer = (Math.Min(pct, 99) \ stepSize) * stepSize
         Dim lo As Integer = groupBase
-        Dim hi As Integer = groupBase + stepSize
+        Dim hi As Integer = Math.Min(groupBase + stepSize, 100)
 
-        Return $"Light {lo:D2}-{hi:D2}%"
+        Return $"Light {lo:D2}%-{hi:D2}%"
     End Function
 
 #End Region

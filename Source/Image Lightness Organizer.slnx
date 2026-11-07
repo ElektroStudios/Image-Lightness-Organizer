@@ -1,3 +1,4 @@
 ﻿<Solution>
   <Project Path="Image Lightness Organizer/Image Lightness Organizer.vbproj" />
+  <Project Path="Image Lightness Organizer.Tests/Image Lightness Organizer.Tests.vbproj" />
 </Solution>

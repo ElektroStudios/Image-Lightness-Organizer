@@ -32,12 +32,15 @@ before_build:
 build:
   project: Source\%APP_DIR_NAME%.%SOLUTION_EXT%
   parallel: true
+test_script:
+  - >-
+    dotnet test "Source\%APP_DIR_NAME%.%SOLUTION_EXT%" --configuration Release --no-build --verbosity normal
 after_build:
   - >-
     7z a -r "%APPVEYOR_PROJECT_NAME%_Build_%APPVEYOR_BUILD_NUMBER%.zip" ^
-    -i!"Source\*\bin\*"
+    -i!"Source\%APP_DIR_NAME%\bin\*"
   - >-
     dotnet nuget locals all --clear
 artifacts:
   - path: "%APPVEYOR_PROJECT_NAME%_Build_%APPVEYOR_BUILD_NUMBER%.zip"
-    name: "%APPVEYOR_PROJECT_NAME%"
+    name: "%APPVEYOR_PROJECT_NAME%"

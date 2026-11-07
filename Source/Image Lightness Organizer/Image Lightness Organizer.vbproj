@@ -17,12 +17,12 @@
     <AssemblyTitle>Image Lightness Organizer</AssemblyTitle>
     <ApplicationIcon>App.ico</ApplicationIcon>
     <AssemblyName>Image_Lightness_Organizer</AssemblyName>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Platforms>AnyCPU</Platforms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <FileVersion>1.0.1</FileVersion>
+    <FileVersion>1.0.2</FileVersion>
     <PackageIcon>App.256.png</PackageIcon>
-    <AssemblyVersion>1.0.1</AssemblyVersion>
+    <AssemblyVersion>1.0.2</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -41,11 +41,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Image_Lightness_Organizer.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="SkiaSharp" Version="3.119.4" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.8" />
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(OS)' == 'Windows_NT'">
     <Exec Command="if exist &quot;$(TargetDir)\runtimes\osx&quot;       (rmdir /S /Q &quot;$(TargetDir)\runtimes\osx&quot;)&#xD;&#xA;if exist &quot;$(TargetDir)\runtimes\win-arm64&quot; (rmdir /S /Q &quot;$(TargetDir)\runtimes\win-arm64&quot;)&#xD;&#xA;DEL /Q /S &quot;$(TargetDir)\runtimes\*.pdb&quot;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;" />
   </Target>
 
