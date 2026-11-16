@@ -53,6 +53,11 @@ image-classification
 
 </div>
 
+> [!NOTE]
+> This command-line application has been superseded by a GUI-based version: [Image Lightness Grouper](https://github.com/ElektroStudios/Image-Lightness-Grouper).
+>
+> This repository may no longer receive updates or maintenance. Users are encouraged to switch to the GUI version for future improvements and bug fixes.
+
 ------------------
 
 <p align="center">
